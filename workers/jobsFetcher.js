@@ -33,6 +33,7 @@ db.pgp.query(companiesWithoutJobs)
         var sources = ['GITHUB', 'INDEED', 'AUTHJOBS'];
         console.log(arr.length + ' jobs from ' + sources[i]);
       });
+      console.log('^^^^^^ ', company.name, ' ^^^^^^');
       return arrayOfJobArrays;
     });
   });
@@ -164,7 +165,7 @@ function mapColumns(schema, jobs, comID) {
         remote_ok: !!job.telecommuting,
         relocation: !!job.relocation_assistance,
         created: job.post_date,
-        city: job.formattedLocation,
+        city: job.formattedLocation || job.company.location.name,
         company_id: comID
       };
     }

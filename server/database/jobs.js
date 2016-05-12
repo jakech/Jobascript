@@ -47,15 +47,15 @@ module.exports = function (db) {
 
   Jobs.addJob = function (jobListing) {
     if (!jobListing) {
-      throw new Error('a job obj is required to query for jobs e.g {title: \'software engineer\'}');
+      throw new Error('a job obj is required to query for jobs e.g {title: \'software engineer\'}, your data: ' + JSON.stringify(jobListing));
     }
-    if (!jobListing.title) {
-      throw new Error('need a title');
+    if (jobListing.title === undefined) {
+      throw new Error('need a title, your data: ' + JSON.stringify(jobListing));
     }
-    if (!jobListing.city) {
-      throw new Error('need a city');
+    if (jobListing.city === undefined) {
+      throw new Error('need a city, your data: ' + JSON.stringify(jobListing));
     }
-    
+
     var noDup = 'SELECT * FROM jobs ' +
                 'WHERE title=${title} AND ' +
                 'city LIKE ${city} AND created=${created};';
