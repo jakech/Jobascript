@@ -8,6 +8,7 @@ var entities = new Entities();
 
 var GITHUB_URL = 'https://jobs.github.com/positions.json';
 var INDEED_URL = 'http://api.indeed.com/ads/apisearch';
+var AUTHJOBS_URL = 'https://authenticjobs.com/api/';
 
 var companiesWithoutJobs = [
   'SELECT companies.name, companies.id',
@@ -23,8 +24,17 @@ db.pgp.query(companiesWithoutJobs)
   return Promise.map(list, function (company) {
     return Promise.all([
       fetchGitHub(company.name, company.id),
-      fetchIndeed(company.name, company.id)
-    ]);
+      fetchIndeed(company.name, company.id),
+      fetchAuthjobs(company.name, company.id)
+    ])
+    .then(function (arrayOfJobArrays) {
+      console.log('====== ', company.name, ' ======');
+      _.each(arrayOfJobArrays, function (arr, i) {
+        var sources = ['GITHUB', 'INDEED', 'AUTHJOBS'];
+        console.log(arr.length + ' jobs from ' + sources[i]);
+      });
+      return arrayOfJobArrays;
+    });
   });
 })
 .then(function (listOfJobs) {
@@ -42,9 +52,10 @@ db.pgp.query(companiesWithoutJobs)
 });
 
 function addJobs(obj) {
+  console.log('adding... ', obj.title);
   return db.jobsTable.addJob(obj)
   .then(function (id) {
-    console.log('JOB!: ', obj.title + ' from ' + obj.company_name + ' added with id: ' + id);
+    console.log('JOB!: ', obj.title + ' at ' + obj.company_name + ' added with id: ' + id);
     return id;
   })
   .catch(function (reason) { // catch exisiting jobs
@@ -52,6 +63,27 @@ function addJobs(obj) {
       console.log('JOB!: ', obj.title, ' already exisits');
     }
     return false;
+  });
+}
+
+function fetchAuthjobs(comName, comID) {
+  return rp({
+    uri: AUTHJOBS_URL,
+    json: true,
+    qs: {
+      api_key: '291d984046483ad333ac5978886bb9ad',
+      format: 'JSON',
+      method: 'aj.jobs.search',
+      company: comName,
+      keywords: 'software, developer, engineer',
+      type: 1, // Fulltime
+      // category: 4, // Front End Engineering, 2 is Back End
+      perpage: 100
+    }
+  }).then(function (data) {
+    console.log('AUTHJOBS >>> ', data.listings.total, ' jobs for ', comName);
+    var theJobs = jobsFilter(data.listings.listing, comName, (j) => j.company.name);
+    return mapColumns('authjobs', theJobs, comID);
   });
 }
 
@@ -72,7 +104,7 @@ function fetchIndeed(comName, comID) {
     json: true
   }).then(function (data) {
     console.log('INDEED >>> ', data.totalResults, ' jobs for ', comName);
-    var theJobs = jobsFilter(data.results, comName);
+    var theJobs = jobsFilter(data.results, comName, (j) => j.company);
     return mapColumns('indeed', theJobs, comID);
   });
 }
@@ -89,7 +121,7 @@ function fetchGitHub(comName, comID) {
   }).then(function (data) {
     console.log('GITHUB >>> ', data.length, ' jobs for ', comName);
 
-    return mapColumns('github', jobsFilter(data, comName), comID);
+    return mapColumns('github', jobsFilter(data, comName, (j) => j.company), comID);
   });
 }
 
@@ -122,15 +154,28 @@ function mapColumns(schema, jobs, comID) {
         city: job.formattedLocation,
         company_id: comID
       };
+    } else if (schema === 'authjobs') {
+      columns = {
+        title: job.title,
+        company_name: job.company.name,
+        url: job.apply_url || job.url,
+        description: entities.encode(job.perks + '<br>' + job.description),
+        // visa_sponsored: null,
+        remote_ok: !!job.telecommuting,
+        relocation: !!job.relocation_assistance,
+        created: job.post_date,
+        city: job.formattedLocation,
+        company_id: comID
+      };
     }
     return columns;
   });
 }
 
-function jobsFilter(jobs, comName) {
+function jobsFilter(jobs, comName, comNameColumnFunc) {
   return _.filter(jobs, function (job) {
-    var loComName = job.company.toLowerCase();
-    console.log('>>>> ', loComName, 'want: ', loComName.indexOf(comName) !== -1);
+    var loComName = comNameColumnFunc(job).toLowerCase();
+    // console.log('>>>> ', loComName, 'want: ', loComName.indexOf(comName) !== -1);
     return loComName.indexOf(comName) !== -1;
   });
 }
