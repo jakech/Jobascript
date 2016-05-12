@@ -3,12 +3,20 @@ var _ = require('underscore');
 var db = require('../server/database');
 var rp = require('request-promise');
 var Entities = require('html-entities').AllHtmlEntities;
- 
+
 var entities = new Entities();
 
 var GITHUB_URL = 'https://jobs.github.com/positions.json';
 
-db.companiesTable.getCompanies({ size: false })
+var companiesWithoutJobs = [
+  'SELECT companies.name, companies.id',
+  'FROM companies LEFT JOIN jobs',
+  'ON (companies.id <> jobs.company_id)',
+  'GROUP BY companies.id;'
+].join(' ');
+
+db.pgp.query(companiesWithoutJobs)
+// db.companiesTable.getCompanies({ size: false })
 .then(function (list) {
   console.log('fetching for ' + list.length + ' companies');
   return Promise.map(list, function (company) {
@@ -22,15 +30,25 @@ db.companiesTable.getCompanies({ size: false })
   return Promise.map(flattenArray, addJobs);
 })
 .then(function (array) {
-  console.log(array.length + ' jobs added to DB');
-  return;
+  console.log('>>>>>> Completed!! <<<<<<');
+  console.log(_.reject(array, (a) => !a).length + ' jobs added to DB');
 })
 .catch(function (error) {
   console.log('FAILED: ', error);
 });
 
 function addJobs(obj) {
-  return db.jobsTable.addJob(obj);
+  return db.jobsTable.addJob(obj)
+  .then(function (id) {
+    console.log('JOB!: ', obj.title + ' from ' + obj.company_name + ' added with id: ' + id);
+    return id;
+  })
+  .catch(function (reason) { // catch exisiting jobs
+    if (reason.constraint === 'jobs_url_key') {
+      console.log('JOB!: ', obj.title, ' already exisits');
+    }
+    return false;
+  });
 }
 
 function fetchGitHub(comName, comID) {
@@ -43,11 +61,12 @@ function fetchGitHub(comName, comID) {
     },
     json: true
   }).then(function (data) {
+    console.log('>>> ', data.length, ' jobs for ', comName);
     var theJobs = _.filter(data, jobFilter);
     return theJobs.map(mapJobToColumns);
   });
 
-  function mapJobToColumns (job) {
+  function mapJobToColumns(job) {
     return {
       title: job.title,
       company_name: job.company,

@@ -6,6 +6,8 @@ var options = {
 var monitor = require('pg-monitor');
 var pgp = require('pg-promise')(options);
 
+console.log('DEBUG: ', config.debug);
+
 if (process.env.NODE_ENV !== 'test' || config.debug) {
   monitor.attach(options);
 }
@@ -14,6 +16,8 @@ if (process.env.NODE_ENV !== 'test' || config.debug) {
 var cn = process.env.DATABASE_URL || 'postgres://jbs:abcd1234@localhost:5432/' + config.dbName;
 
 var db = pgp(cn);
+
+exports.pgp = db;
 
 exports.usersTable = require('./users.js')(db);
 exports.companiesTable = require('./companies.js')(db);

@@ -74,6 +74,14 @@ describe('Database jobs', function () {
         return !isNaN(Number(num));
       });
     });
+
+    it('should not duplicated jobs', function () {
+      return jobsTable.addJob({ url: 'abc' })
+      .then(function () {
+        return jobsTable.addJob({ url: 'abc' });
+      })
+      .should.eventually.be.rejected;
+    });
   });
 
   describe('updateJobs', function () {

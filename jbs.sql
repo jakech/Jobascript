@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS news (
 CREATE TABLE IF NOT EXISTS jobs (
   title TEXT,
   company_name TEXT,
-  url TEXT,
+  url TEXT UNIQUE,
   description TEXT,
   visa_sponsored BOOLEAN,
   remote_ok BOOLEAN,
