@@ -7,6 +7,7 @@ var Entities = require('html-entities').AllHtmlEntities;
 var entities = new Entities();
 
 var GITHUB_URL = 'https://jobs.github.com/positions.json';
+var INDEED_URL = 'http://api.indeed.com/ads/apisearch';
 
 var companiesWithoutJobs = [
   'SELECT companies.name, companies.id',
@@ -20,7 +21,7 @@ db.pgp.query(companiesWithoutJobs)
 .then(function (list) {
   console.log('fetching for ' + list.length + ' companies');
   return Promise.map(list, function (company) {
-    return fetchGitHub(company.name, company.id);
+    return fetchIndeed(company.name, company.id);
   });
 })
 .then(function (listOfJobs) {
@@ -51,6 +52,28 @@ function addJobs(obj) {
   });
 }
 
+function fetchIndeed(comName, comID) {
+  return rp({
+    uri: INDEED_URL,
+    qs: {
+      format: 'json',
+      v: 2,
+      publisher: '9810665890415219', // key
+      q: 'company:' + comName + ' title:software',
+      l: 'sf',
+      // sort: 'date',
+      jt: 'fulltime', // job type
+      limit: 1000,
+      radius: 1000
+    },
+    json: true
+  }).then(function (data) {
+    console.log('INDEED >>> ', data.totalResults, ' jobs for ', comName);
+    var theJobs = jobsFilter(data.results, comName);
+    return mapColumns('indeed', theJobs, comID);
+  });
+}
+
 function fetchGitHub(comName, comID) {
   return rp({
     uri: GITHUB_URL,
@@ -61,30 +84,51 @@ function fetchGitHub(comName, comID) {
     },
     json: true
   }).then(function (data) {
-    console.log('>>> ', data.length, ' jobs for ', comName);
-    var theJobs = _.filter(data, jobFilter);
-    return theJobs.map(mapJobToColumns);
+    console.log('GITHUB >>> ', data.length, ' jobs for ', comName);
+
+    return mapColumns('github', jobsFilter(data, comName), comID);
   });
+}
 
-  function mapJobToColumns(job) {
-    return {
-      title: job.title,
-      company_name: job.company,
-      url: job.url,
-      description: entities.encode(job.description),
-      // visa_sponsored: null,
-      // remote_ok: null,
-      // relocation: null,
-      created: job.created_at,
-      city: job.location,
-      company_id: comID
-    };
-  }
+function mapColumns(schema, jobs, comID) {
+  return jobs.map(function (job) {
+    var columns = {};
+    if (schema === 'github') {
+      columns = {
+        title: job.title,
+        company_name: job.company,
+        url: job.url,
+        description: entities.encode(job.description),
+        // visa_sponsored: null,
+        // remote_ok: null,
+        // relocation: null,
+        created: job.created_at,
+        city: job.location,
+        company_id: comID
+      };
+    } else if (schema === 'indeed') {
+      columns = {
+        title: job.jobtitle,
+        company_name: job.company,
+        url: job.url,
+        description: entities.encode(job.snippet),
+        // visa_sponsored: null,
+        // remote_ok: null,
+        // relocation: null,
+        created: job.date,
+        city: job.formattedLocation,
+        company_id: comID
+      };
+    }
+    return columns;
+  });
+}
 
-  function jobFilter(job) {
+function jobsFilter(jobs, comName) {
+  return _.filter(jobs, function (job) {
     var loComName = job.company.toLowerCase();
     console.log('>>>> ', loComName, 'want: ', loComName.indexOf(comName) !== -1);
     return loComName.indexOf(comName) !== -1;
-  }
+  });
 }
 
