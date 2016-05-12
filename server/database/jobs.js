@@ -49,6 +49,16 @@ module.exports = function (db) {
     if (!jobListing) {
       throw new Error('a job obj is required to query for jobs e.g {title: \'software engineer\'}');
     }
+    if (!jobListing.title) {
+      throw new Error('need a title');
+    }
+    if (!jobListing.city) {
+      throw new Error('need a city');
+    }
+    
+    var noDup = 'SELECT * FROM jobs ' +
+                'WHERE title=${title} AND ' +
+                'city LIKE ${city} AND created=${created};';
 
     /* eslint-disable */
     var sqlStr = [
@@ -61,10 +71,21 @@ module.exports = function (db) {
       ') RETURNING id;'
     ].join(' ');
     /* eslint-enable */
+    return db.tx(function (t) {
+      return t.batch([
+        t.none(noDup, jobListing),
+        t.one(sqlStr, { table: TABLE_NAME })
+      ]);
+    })
+    .then(function (arr) {
+      return arr[1].id;
+    })
+    .catch(function (err) {
+      if (err[0] && err[0].success) { // check if it failed the duplicates check
+        return Promise.reject(err[1].result);
+      }
 
-    return db.one(sqlStr, { table: TABLE_NAME })
-    .then(function (data) {
-      return data.id;
+      return Promise.reject(err);
     });
   };
 

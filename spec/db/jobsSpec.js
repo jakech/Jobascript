@@ -60,14 +60,20 @@ describe('Database jobs', function () {
   describe('addJob', function () {
     it('add a job', function () {
       return jobsTable.addJob({
-        title: 'Software Engineer'
+        title: 'Software Engineer',
+        city: 'home',
+        url: 'abc',
+        created: '2016-05-02'
       })
       .should.eventually.be.fullfilled;
     });
 
     it('return an id', function () {
       return jobsTable.addJob({
-        title: 'Software Engineer'
+        title: 'Software Engineer',
+        city: 'homed',
+        url: 'abdc',
+        created: '2016-05-04'
       })
       .should.eventually.satisfy(function (num) {
         JOB_ID = num;
@@ -75,10 +81,36 @@ describe('Database jobs', function () {
       });
     });
 
-    it('should not duplicated jobs', function () {
-      return jobsTable.addJob({ url: 'abc' })
+    it('should not accept duplicated jobs, identified by url', function () {
+      return jobsTable.addJob({
+        title: 'blah',
+        city: 'home',
+        url: 'abc',
+        created: '2016-05-02'
+      })
       .then(function () {
-        return jobsTable.addJob({ url: 'abc' });
+        return jobsTable.addJob({
+          title: 'blah',
+          city: 'home',
+          url: 'abc',
+          created: '2016-05-02'
+        });
+      })
+      .should.eventually.be.rejected;
+    });
+
+    it('should not accept duplicated, decided by posted date, job tite and city', function () {
+      return jobsTable.addJob({
+        title: 'same job',
+        city: 'sf',
+        created: '2016-05-02'
+      })
+      .then(function () {
+        return jobsTable.addJob({
+          title: 'same job',
+          city: 'sf',
+          created: '2016-05-02'
+        });
       })
       .should.eventually.be.rejected;
     });
