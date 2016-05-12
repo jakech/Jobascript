@@ -35,7 +35,10 @@ module.exports = function (db) {
     if (args === undefined) {
       return Promise.reject('must have arguments');
     }
-    var sqlStr = 'UPDATE ${table~} SET ' + helpers.toSqlString(args, ',') + ' WHERE id=$$${job_id}$$ RETURNING *;';
+    var sqlStr = 'UPDATE ${table~} SET ' +
+    helpers.toSqlString(args, ',') +
+    ' WHERE id=$$${job_id}$$ RETURNING *;';
+
     return db.one(sqlStr, {
       table: TABLE_NAME,
       job_id: Number(jobId)
@@ -52,8 +55,10 @@ module.exports = function (db) {
       'INSERT INTO ${table~} (',
       Object.keys(jobListing).toString(),
       ') VALUES (',
-      '$$' + _.values(jobListing) + '$$',
-      ') RETURNING id'
+      _.map(jobListing, function (value) {
+        return '$$' + value + '$$'
+      }).toString(),
+      ') RETURNING id;'
     ].join(' ');
     /* eslint-enable */
 
