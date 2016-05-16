@@ -1,5 +1,8 @@
+var inflection = require('inflection');
 module.exports = function ($scope, currentCompany, Company, $state) {
   $scope.company = currentCompany;
+  $scope.mapURI = window.encodeURIComponent($scope.company.location);
+  $scope.followText = inflection.inflect('people', currentCompany.follow_count);
 
   // methods
   $scope.follow = followCompany;

@@ -7,7 +7,9 @@
       <div class="media-body pl4">
         <div class="media-heading cf">
           <h4 class="dib v-mid mw6">
+            <a ng-href="{{ company.url }}" target="_blank">
             {{ (company.legal_name.toLowerCase().indexOf(company.display_name.toLowerCase()) !== -1 ? company.legal_name : company.display_name) || company.display_name }}
+            </a>
           </h4>
           <div class="dib ml4 v-mid">
             <button class="btn btn-sm" ng-if="company.isFollowing" ng-click="unfollow()" ng-mouseleave="btnHover = false" ng-mouseenter="btnHover = true" ng-init="btnHover = false" ng-class="{'btn-danger': btnHover, 'btn-link': !btnHover}">
@@ -18,6 +20,7 @@
               <i class="glyphicon glyphicon-heart-empty"></i> Follow
             </button>
           </div>
+          <span class="ml2 small text-muted" ng-if="!company.isFollowing">Followed by {{ company.follow_count }} {{ followText }}</span>
         </div>
         <ul class="nav nav-pills mt2">
           <li ui-sref-active="active">
@@ -29,7 +32,7 @@
           <li ui-sref-active="active"><a ui-sref="comm()">Communications</a></li>
           <li ui-sref-active="active"><a ui-sref="news()">News</a></li>
         </ul>
-        <p class="small text-muted mt4">Followed by {{ company.follow_count }} people</p>
+        <a class="db small text-muted mt4" ng-if="company.location" ng-href="https://www.google.com/maps/place/{{ mapURI }}" target="_blank">{{ company.location }}</a>
       </div>
     </div><blockquote ng-if="company.description" ng-init="descLimit = 80" class="dib v-mid pl4 w-40" ng-click="descLimit = descLimit ? undefined : 80" ng-class="{'clickable': descLimit}">{{ company.description | limitTo:descLimit}}{{descLimit && descLimit < company.description.length ? ' ...' : ''}}</blockquote>
   </section>
