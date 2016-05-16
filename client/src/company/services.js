@@ -11,7 +11,7 @@ module.exports = function ($http) {
     })
     .then(function (resp) {
       return resp.data.filter(function (com) {
-        return !!(com.name && com.logo && com.domain); // exclude incomplete data
+        return !!(com.name && com.domain); // at least has a name and domain
       });
     });
   };

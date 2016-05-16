@@ -38,7 +38,7 @@ module.exports = function ($scope, topCompanies, User, Company, $state) {
       toFollow[company.domain] = company;
       $scope.numOfFollows = inflection.inflect(len + ' company', Object.keys(toFollow).length);
     }
-    console.log(toFollow);
+    // console.log(toFollow);
   };
 
   $scope.suggest = _.debounce(function (queryStr) {
@@ -56,7 +56,7 @@ module.exports = function ($scope, topCompanies, User, Company, $state) {
         var fullCom = _.find(topCompaniesCache, function (cached) {
           return company.domain === cached.domain;
         });
-        console.log('>>', fullCom);
+        // console.log('>>', fullCom);
         return fullCom || company; // keep companies with stats
       });
 
